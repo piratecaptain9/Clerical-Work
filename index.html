@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f5fd0">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="報到系統">
+<title>報到暨班員統計</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1d2330;--mut:#6b7385;--pri:#2f5fd0;--on:#fff;--bd:#dde1e8;--ok:#1f8a4c;--okbg:#e3f4ea;--bad:#c23b3b;--warn:#fff4d6;--warnt:#7a5a00;--wk:#b9650b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--tx:#e8ebf1;--mut:#9aa3b5;--pri:#6f93f0;--on:#10141c;--bd:#2f3644;--ok:#4cc380;--okbg:#17321f;--bad:#ef7676;--warn:#3a2f10;--warnt:#f0cf7a;--wk:#f0a35e}}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,"Noto Sans TC","PingFang TC",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:12px}
+.banner{background:var(--warn);color:var(--warnt);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+h1{font-size:18px;margin:0}h2{font-size:16px;margin:0 0 8px}
+.who{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25}.who b{font-size:19px}.who span{font-size:13px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:10px}
+button,input,select{font:inherit;color:var(--tx)}
+button,a.btn{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:6px 12px;cursor:pointer;text-decoration:none;color:var(--tx);display:inline-block}
+button.p{background:var(--pri);color:var(--on);border-color:var(--pri)}button:disabled{opacity:.5;cursor:not-allowed}
+input,select{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;width:100%}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{flex:1}
+.tabs button.on{background:var(--pri);color:var(--on);border-color:var(--pri)}
+.tbr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.yl{margin:0;font-size:15px;color:var(--mut)}.yrsel{width:auto;font-size:18px;font-weight:600}
+.vt{display:flex;gap:6px}.vt button{flex:1;padding:9px 14px;font-size:16px}
+.seg{display:flex;gap:4px;flex-wrap:wrap}.seg button{padding:5px 10px;font-size:13px}
+.mut{color:var(--mut);font-size:13px}
+.tag{font-size:12px;border-radius:99px;padding:0 7px;border:1px solid var(--bd);color:var(--mut);white-space:nowrap}.tag.wk{color:var(--wk);border-color:var(--wk)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.tile{background:var(--bg);border-radius:8px;padding:6px 4px;text-align:center}.tile b{display:block;font-size:22px;line-height:1.2}.tile span{font-size:12px;color:var(--mut)}
+.tile.ok b{color:var(--ok)}.tile.bad b{color:var(--bad)}.tile.wk b{color:var(--wk)}
+.bar{height:8px;background:var(--bd);border-radius:9px;overflow:hidden;margin:8px 0 4px}.bar i{display:block;height:100%;background:var(--ok)}
+.stk{position:sticky;top:0;z-index:3}
+.zh{display:flex;justify-content:space-between;background:var(--bg);color:var(--mut);font-size:13px;padding:4px 8px;border-radius:6px;margin-top:10px}
+.pr{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--bd)}.pr:last-child{border-bottom:0}
+.pr.on{background:var(--okbg)}.pr .pn{flex:1;min-width:0}.pr .pn b{font-size:17px}
+.cib{min-width:96px;padding:10px 12px;font-size:16px;font-weight:600;border:2px solid var(--pri);color:var(--pri)}.cib.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.dsel button{padding:6px 10px;font-size:14px}.dsel button small{display:block;font-size:11px;opacity:.8}
+.tb{width:100%;border-collapse:collapse;font-size:14px}.tb td,.tb th{border-bottom:1px solid var(--bd);padding:6px 5px;text-align:left;vertical-align:middle}.tb th{color:var(--mut);font-weight:500;font-size:12px;white-space:nowrap}
+.tb td:first-child{white-space:nowrap}.tb .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.tb tr.tot td{font-weight:700;background:var(--bg)}.tb tr.ck{cursor:pointer}.tb tr.ck:hover td{background:var(--bg)}
+.tb tr.det td{background:var(--bg);font-size:13px;line-height:1.7}
+.pb{display:inline-block;width:56px;height:6px;background:var(--bd);border-radius:9px;overflow:hidden;vertical-align:middle;margin-right:4px}.pb i{display:block;height:100%;background:var(--ok)}.lo .pb i{background:var(--bad)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px;z-index:9}
+.modal{background:var(--card);border-radius:12px;padding:16px;width:100%;max-width:480px}
+.scx{overflow-x:auto}
+@media(max-width:560px){button{padding:9px 14px}input,select{font-size:16px}.wrap{padding:8px}.tile b{font-size:20px}.hide-s{display:none}.tb td.t{min-width:8.5em}.yrsel{font-size:16px;padding:6px 8px}.tbr select{padding:6px 8px}.tbr button{padding:7px 10px}}
+</style></head><body><div class="wrap" id="app"></div>
+<script type="module">
+/* ============================================================
+   報到暨班員統計（獨立系統，repo：clericalwork）
+   - 與「年度課程暨勤務管理系統」共用同一個 Firebase 專案，但不修改它的程式。
+   - 讀取：courses（近期或整年）、signups（只讀選定那一場）。
+   - 寫入：checkins/{課程ID}（每個課程一份報到文件）、ciStats/{課程ID}（統計摘要），
+           以及現場補登時的 signups＋courses.counts（與行事曆報名連動）。
+   ============================================================ */
+const CONFIG={apiKey:"AIzaSyB0a91-QE4yE7DAyMHhZpn2fRPXJrYPctw",authDomain:"annual-calendar-c4a37.firebaseapp.com",projectId:"annual-calendar-c4a37",appId:"1:241829509669:web:9b6496836bc486abfd5dcc"};
+const CAL_URL="";        // ← 行事曆網址，例如 "../你的行事曆repo名稱/"；留空則不顯示「回行事曆」按鈕
+const NEAR_BEFORE=45,NEAR_AFTER=30; // 報到頁預設只載入「今天前 45 天～後 30 天」開始的課程
+const DEMO=new URLSearchParams(location.search).has("demo"),LS="cw_";
+
+// ===== 小工具 =====
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>"i"+Math.random().toString(36).slice(2,10),nk=n=>String(n).trim().toLowerCase();
+const LEADERS=["負責點傳師","帶班","講師","總務組組長","文書組組長","烹飪組組長","交通組組長","視聽組組長"],CATS=["總壇","分壇","禪修","了愿"],
+ZONES=["天真區","天善區","天美區","天志區","天孝區","天仁區"],SEX=["乾","坤"],WD="日一二三四五六";
+const isLead=r=>LEADERS.includes(r.name),hasBz=c=>(c.roles||[]).some(r=>r.name=="班員"),isMulti=c=>c.endDate&&c.endDate!=c.date;
+const md=d=>+d.slice(5,7)+"/"+ +d.slice(8),wd=d=>WD[new Date(d+"T00:00:00").getDay()];
+const dayList=c=>{const r=[];for(let t=Date.parse(c.date+"T00:00:00Z"),e=Date.parse((c.endDate||c.date)+"T00:00:00Z");t<=e;t+=864e5)r.push(new Date(t).toISOString().slice(0,10));return r};
+const sdays=(s,c)=>s.days&&s.days.length?s.days:dayList(c);
+const todayLocal=()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")};
+const addDays=(d,n)=>new Date(Date.parse(d+"T00:00:00Z")+n*864e5).toISOString().slice(0,10);
+const hm=iso=>{const t=new Date(iso);return isNaN(t)?"":String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")};
+const ftime=iso=>{const t=new Date(iso);return isNaN(t)?"":t.toLocaleString("sv-SE").slice(0,16)};
+const zi=z=>{const i=ZONES.indexOf(z);return i<0?99:i},xi=x=>{const i=SEX.indexOf(x);return i<0?9:i},zs=z=>(z||"").replace("區","");
+const pct=(a,n)=>n?Math.round(a*100/n):0;
+const pbar=(a,n)=>n?`<span class="${pct(a,n)<60?"lo":""}"><span class="pb"><i style="width:${pct(a,n)}%"></i></span>${pct(a,n)}%</span>`:'<span class="mut">—</span>';
+const lsGet=k=>{try{return localStorage.getItem(LS+k)}catch(e){return null}},lsSet=(k,v)=>{try{v==null?localStorage.removeItem(LS+k):localStorage.setItem(LS+k,v)}catch(e){}};
+
+// ===== 資料層 =====
+let F=null,M=null,lv=0,me=null;const dsubs=new Set();
+async function startFirebase(){
+ const B="https://www.gstatic.com/firebasejs/10.12.2/",[A,S,Au]=await Promise.all(["app","firestore","auth"].map(n=>import(B+"firebase-"+n+".js")));
+ // 用獨立的 app 名稱：登入身分、本機快取都和行事曆分開，行事曆登出不會影響這裡
+ const app=A.initializeApp(CONFIG,"clericalwork");let fs;
+ try{fs=S.initializeFirestore(app,{localCache:S.persistentLocalCache({tabManager:S.persistentMultipleTabManager()})})}catch(e){fs=S.getFirestore(app)}
+ const uc=await Au.signInAnonymously(Au.getAuth(app));F={fs,S,uid:uc.user.uid};
+ try{const sn=await S.getDoc(S.doc(fs,"claims",F.uid));if(sn.exists())lv={super:2,manager:1}[sn.data().level]||0}catch(e){}}
+function demoLoad(){let a={},b={};try{a=JSON.parse(localStorage.getItem("acms_v1"))||{}}catch(e){}try{b=JSON.parse(localStorage.getItem(LS+"demo"))||{}}catch(e){}
+ M={courses:a.courses||[],signups:a.signups||[],cfg:a.cfg||{managerKey:"manager",superKey:"admin"},checkins:b.checkins||{},stats:b.stats||{}};lv=+lsGet("demo_lv")||0}
+function demoSave(){try{const a=JSON.parse(localStorage.getItem("acms_v1")||"{}");a.signups=M.signups;a.courses=M.courses;localStorage.setItem("acms_v1",JSON.stringify(a));localStorage.setItem(LS+"demo",JSON.stringify({checkins:M.checkins,stats:M.stats}))}catch(e){}setTimeout(()=>dsubs.forEach(f=>f()))}
+const dsub=f=>{dsubs.add(f);setTimeout(f);return()=>dsubs.delete(f)};
+const docs=q=>q.docs.map(d=>({...d.data(),id:d.id}));
+const store={
+ // 課程：近期（日期範圍查詢，只讀幾堂）或整年
+ listenCourses(mode,y,cb){const t=todayLocal(),from=addDays(t,-NEAR_BEFORE),to=addDays(t,NEAR_AFTER);
+  if(!F)return dsub(()=>cb(M.courses.filter(c=>mode=="near"?c.date>=from&&c.date<=to:c.year==y)));
+  const{fs,S}=F,q=mode=="near"?S.query(S.collection(fs,"courses"),S.where("date",">=",from),S.where("date","<=",to)):S.query(S.collection(fs,"courses"),S.where("year","==",y));
+  return S.onSnapshot(q,s=>cb(docs(s)),e=>alert("讀取課程失敗："+e.message))},
+ // 選定的一場：該課程的報名＋報到文件（1 份）
+ listenCourse(cid,cb){const st={signups:null,ck:null},emit=()=>{if(st.signups&&st.ck)cb(st)};
+  if(!F)return dsub(()=>{st.signups=M.signups.filter(s=>s.courseId==cid);st.ck=M.checkins[cid]||{};emit()});
+  const{fs,S}=F,u1=S.onSnapshot(S.query(S.collection(fs,"signups"),S.where("courseId","==",cid)),s=>{st.signups=docs(s);emit()},e=>alert("讀取報名失敗："+e.message)),
+  u2=S.onSnapshot(S.doc(fs,"checkins",cid),s=>{st.ck=s.exists()?s.data():{};emit()},e=>alert("讀取報到紀錄失敗："+e.message));
+  return()=>{u1();u2()}},
+ async setCi(c,d,sid,on){const v=on?{t:new Date().toISOString(),by:me.name}:null;
+  if(!F){const k=M.checkins[c.id]=M.checkins[c.id]||{courseId:c.id,year:c.year,d:{}};k.d[d]=k.d[d]||{};if(v)k.d[d][sid]=v;else delete k.d[d][sid];return demoSave()}
+  const{fs,S}=F;await S.setDoc(S.doc(fs,"checkins",c.id),{courseId:c.id,year:c.year,d:{[d]:{[sid]:v||S.deleteField()}}},{merge:true})},
+ // 現場補登：寫入正式報名（與行事曆連動，不受名額限制）並報到
+ async walkin(c,r,name,zone,sex,d,ex){const now=new Date().toISOString(),v={t:now,by:me.name};
+  if(ex){const days=isMulti(c)&&!sdays(ex,c).includes(d)?[...sdays(ex,c),d].sort():null;
+   if(!F){if(days)ex.days=days;return this.setCi(c,d,ex.id,true)}
+   if(days)await F.S.updateDoc(F.S.doc(F.fs,"signups",ex.id),{days});return this.setCi(c,d,ex.id,true)}
+  const sd={courseId:c.id,roleId:r.id,name,at:now,walkin:true,...(zone?{zone}:{}),...(sex?{sex}:{}),...(isMulti(c)?{days:[d]}:{})},sid=c.id+"__"+encodeURIComponent(nk(name));
+  if(!F){M.signups.push({id:sid,...sd});return this.setCi(c,d,sid,true)}
+  const{fs,S}=F,cr=S.doc(fs,"courses",c.id),sr=S.doc(fs,"signups",sid),kr=S.doc(fs,"checkins",c.id);
+  await S.runTransaction(fs,async t=>{const cs=await t.get(cr),ss=await t.get(sr);
+   if(!cs.exists()||cs.data().status!="active")throw Error("課程已取消或不存在");if(ss.exists())throw Error("此人已報名這堂課，請在名單中直接報到");
+   const n=(cs.data().counts||{})[r.id]||0;t.set(sr,sd);t.update(cr,{["counts."+r.id]:n+1});t.set(kr,{courseId:c.id,year:c.year,d:{[d]:{[sid]:v}}},{merge:true})})},
+ async getStat(cid){if(!F)return M.stats[cid]||null;const s=await F.S.getDoc(F.S.doc(F.fs,"ciStats",cid));return s.exists()?s.data():null},
+ async putStat(o){if(!F){M.stats[o.courseId]=o;return demoSave()}await F.S.setDoc(F.S.doc(F.fs,"ciStats",o.courseId),o)},
+ async statsOfYear(y){if(!F)return Object.values(M.stats).filter(s=>s.year==y);const{fs,S}=F;return docs(await S.getDocs(S.query(S.collection(fs,"ciStats"),S.where("year","==",y))))},
+ // 整年重算：讀全年課程、報名、報到，重寫每堂課的統計摘要（較耗用量，僅在需要時使用）
+ async rebuild(y){let cs,sg,ck;
+  if(!F){cs=M.courses.filter(c=>c.year==y);sg=M.signups;ck=M.checkins}
+  else{const{fs,S}=F;cs=docs(await S.getDocs(S.query(S.collection(fs,"courses"),S.where("year","==",y))));sg=[];
+   for(let i=0;i<cs.length;i+=30){const ids=cs.slice(i,i+30).map(c=>c.id);sg.push(...docs(await S.getDocs(S.query(S.collection(fs,"signups"),S.where("courseId","in",ids)))))}
+   ck={};docs(await S.getDocs(S.query(S.collection(fs,"checkins"),S.where("year","==",y)))).forEach(k=>ck[k.id]=k)}
+  const out=cs.filter(c=>c.status=="active").map(c=>summarize(c,sg.filter(s=>s.courseId==c.id),ck[c.id]||{}));
+  if(!F){M.stats=Object.fromEntries(Object.entries(M.stats).filter(([,s])=>s.year!=y));out.forEach(o=>M.stats[o.courseId]=o);demoSave();return out}
+  const{fs,S}=F,old=await this.statsOfYear(y),keep=new Set(out.map(o=>o.courseId)),ops=[...out.map(o=>b=>b.set(S.doc(fs,"ciStats",o.courseId),o)),...old.filter(o=>!keep.has(o.id)).map(o=>b=>b.delete(S.doc(fs,"ciStats",o.id)))];
+  for(let i=0;i<ops.length;i+=400){const b=S.writeBatch(fs);ops.slice(i,i+400).forEach(f=>f(b));await b.commit()}return out},
+ async claim(pw){if(!F){const n=pw==M.cfg.superKey?2:pw==M.cfg.managerKey?1:0;lsSet("demo_lv",n||null);return n}
+  const{fs,S}=F,ref=S.doc(fs,"claims",F.uid);for(const[l,n]of[["super",2],["manager",1]]){try{await S.setDoc(ref,{level:l,k:pw});return n}catch(e){}}return 0},
+ async unclaim(){if(!F){lsSet("demo_lv",null);return}try{await F.S.deleteDoc(F.S.doc(F.fs,"claims",F.uid))}catch(e){}}};
+
+// 統計摘要：一堂課一份，每天一個名單（姓名、區別、性別、職司、報到時間、是否現場）
+function summarize(c,signups,ck){const rs=c.roles||[],days={};dayList(c).forEach(d=>days[d]=[]);
+ signups.forEach(s=>{const r=rs.find(x=>x.id==s.roleId);if(!r)return;sdays(s,c).forEach(d=>{if(!days[d])return;const e=((ck.d||{})[d]||{})[s.id];
+  days[d].push({n:String(s.name).trim(),z:s.zone||"",x:s.sex||"",r:r.name,t:e&&e.t?hm(e.t):"",w:s.walkin?1:0})})});
+ Object.values(days).forEach(l=>l.sort((a,b)=>a.n.localeCompare(b.n,"zh-Hant")));
+ return{courseId:c.id,year:c.year,title:c.title||"",category:c.category||"",date:c.date,endDate:c.endDate||"",start:c.start||"",hasBz:hasBz(c),days}}
+const canon=v=>Array.isArray(v)?"["+v.map(canon).join(",")+"]":v&&typeof v=="object"?"{"+Object.keys(v).sort().map(k=>JSON.stringify(k)+":"+canon(v[k])).join(",")+"}":JSON.stringify(v);
+const sameStat=(a,b)=>!!a&&!!b&&canon({...a,at:0,by:0})==canon({...b,at:0,by:0});
+
+// ===== 狀態 =====
+let year=new Date().getFullYear(),tab="ci",cmode="near",courses=[],cid=null,day=null,cur=null,cat="",showAll=false,ready=false,composing=false;
+let unC=null,unK=null,loadingCourse=false,dirty=false,stTimer=null;
+const fl={q:"",st:"all",zone:"",sex:"",role:""};
+let stats=null,statsY=null,statsLoading=false,who="bz",scope="year",pq="",psort="rate",openP=new Set();
+function subCourses(){if(unC)unC();unC=store.listenCourses(cmode,year,l=>{courses=l;refresh()})}
+function subCourse(){if(unK){unK();unK=null}cur=null;if(!cid)return;loadingCourse=true;const id=cid;
+ unK=store.listenCourse(id,st=>{if(id!=cid)return;const first=loadingCourse;loadingCourse=false;cur={...st,cid:id};if(first)checkStat();refresh()})}
+// 打開一場時：比對統計摘要，有差異（例如行事曆那邊有人改了報名）才寫入
+async function checkStat(){const c=courses.find(x=>x.id==cid);if(!c||!cur||c.date>todayLocal())return;try{const o=await store.getStat(c.id),n=summarize(c,cur.signups,cur.ck);if(!sameStat(o,n))await saveStat(c)}catch(e){}}
+async function saveStat(c){c=c||courses.find(x=>x.id==cid);if(!c||!cur||cur.cid!=c.id)return;const o={...summarize(c,cur.signups,cur.ck),at:new Date().toISOString(),by:me.name};
+ await store.putStat(o);dirty=false;if(stats&&statsY==o.year){stats=stats.filter(s=>s.courseId!=o.courseId).concat(o)}}
+function markDirty(){dirty=true;clearTimeout(stTimer);stTimer=setTimeout(()=>saveStat().catch(()=>{}),15000)}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="hidden"&&dirty)saveStat().catch(()=>{})});
+const flushStat=async()=>{clearTimeout(stTimer);if(dirty)try{await saveStat()}catch(e){}};
+
+// ===== 畫面 =====
+function refresh(){if(!ready||composing)return;render()}
+function render(){const ae=document.activeElement,fid=ae&&ae.id&&$("#app").contains(ae)?ae.id:null,ss=fid&&ae.selectionStart;
+ $("#app").innerHTML=view();if(fid){const e=document.getElementById(fid);if(e){e.focus();try{if(ss!=null)e.setSelectionRange(ss,ss)}catch(x){}}}}
+function view(){if(!me||lv<1)return gate();
+ const yrs=[year-1,year,year+1].filter((v,i,a)=>a.indexOf(v)==i);
+ return `${DEMO?'<div class="banner">示範模式：資料只存在此瀏覽器</div>':""}
+ <header><h1>報到暨班員統計</h1><div class="row"><div class="who"><b>${esc(me.name)}</b><span>${["","管理者","後台管理者"][lv]}</span></div>${CAL_URL?`<a class="btn" href="${esc(CAL_URL)}">行事曆</a>`:""}<button data-a="logout">登出</button></div></header>
+ <div class="card"><div class="tbr"><label class="yl">年度</label><select id="yr" class="yrsel">${yrs.map(y=>`<option ${y==year?"selected":""}>${y}</option>`).join("")}</select>
+ <select id="cat" style="width:auto">${["",...CATS].map(k=>`<option value="${k}" ${cat==k?"selected":""}>${k||"全部分類"}</option>`).join("")}</select><span class="sp"></span>${tab=="stat"?'<button data-a="xlsx">匯出 Excel</button>':""}</div>
+ <div class="tabs vt" style="margin-top:8px">${[["ci","報到"],["stat","統計彙整"]].map(([k,t])=>`<button data-a="tab" data-v="${k}" class="${tab==k?"on":""}">${t}</button>`).join("")}</div></div>
+ ${tab=="ci"?ciView():statView()}`}
+function gate(){return `<div class="card" style="max-width:380px;margin:12vh auto"><h1>報到暨班員統計</h1>
+ <p class="mut">此系統限管理者使用。請輸入姓名與管理密碼（與行事曆系統相同，一般管理者即可）。第一次在這台裝置使用時需要輸入，之後會記住。</p>
+ <label>姓名（會記錄為報到人員）</label><input id="g_nm" maxlength="20" value="${esc(me?me.name:lsGet("name")||"")}"><label>管理密碼</label><input id="g_pw" type="password" autocomplete="current-password">
+ ${DEMO?'<p class="mut">示範密碼：一般管理者 manager、後台管理者 admin</p>':""}
+ <p><button class="p" data-a="login" style="width:100%">進入</button></p></div>`}
+
+// ----- 報到 -----
+const catOk=c=>!cat||c.category==cat;
+const ciCourses=()=>courses.filter(c=>c.status=="active"&&catOk(c)&&(showAll||hasBz(c))).sort((a,b)=>(a.date+(a.start||"")).localeCompare(b.date+(b.start||"")));
+function pickCourse(){const L=ciCourses(),t=todayLocal();if(!L.length){if(cid){cid=null;subCourse()}return null}
+ if(!L.some(c=>c.id==cid)){const c=L.find(c=>c.date<=t&&(c.endDate||c.date)>=t)||L.find(c=>c.date>t)||L[L.length-1];cid=c.id;day=null;subCourse()}
+ const c=L.find(x=>x.id==cid),dl=dayList(c);if(!dl.includes(day))day=dl.includes(t)?t:dl[0];return c}
+const roleKey=c=>fl.role||(hasBz(c)?"bz":"all");
+const ciOf=(sid,d)=>((cur&&cur.ck.d||{})[d]||{})[sid];
+function roster(c,d,rk){if(!cur||cur.cid!=c.id)return[];const rs=c.roles||[];return cur.signups.filter(s=>sdays(s,c).includes(d)).map(s=>({s,r:rs.find(x=>x.id==s.roleId)||{name:"（已刪除職司）"}}))
+ .filter(x=>rk=="all"||(rk=="bz"?x.r.name=="班員":x.r.name!="班員"))}
+function ciView(){const c=pickCourse(),L=ciCourses();
+ const pick=`<div class="card"><label style="margin-top:0">班程</label><select id="cs">${L.map(x=>`<option value="${x.id}" ${x.id==cid?"selected":""}>${md(x.date)}${isMulti(x)?"～"+md(x.endDate):""}　${esc(x.title)}${x.category?"（"+x.category+"）":""}</option>`).join("")}</select>
+ <div class="row" style="margin-top:6px"><label style="display:flex;gap:6px;align-items:center;color:var(--tx);margin:0"><input type="checkbox" id="sa" style="width:auto" ${showAll?"checked":""}> 含沒有「班員」職司的課程</label><span class="sp"></span>
+ <button class="seg" data-a="cmode" style="font-size:13px">${cmode=="near"?`顯示 ${year} 全年課程`:"只顯示近期課程"}</button></div>`;
+ if(!c)return pick+`<p class="mut">${cmode=="near"?"近期":year+" 年度"}沒有可報到的班程${cat?"（"+cat+"）":""}。</p></div>`;
+ if(!cur||cur.cid!=c.id)return pick+'<p class="mut">載入名單中…</p></div>';
+ const rk=roleKey(c),d=day,all=roster(c,d,rk),on=x=>!!ciOf(x.s.id,d),n=all.length,a=all.filter(on).length,w=all.filter(x=>on(x)&&x.s.walkin).length,dl=dayList(c),t=todayLocal();
+ const days=isMulti(c)?`<label>日期</label><div class="seg tabs dsel">${dl.map(x=>{const R=roster(c,x,rk);return `<button data-a="dy" data-d="${x}" class="${x==d?"on":""}">${md(x)}（${wd(x)}）<small>${R.filter(y=>ciOf(y.s.id,x)).length}/${R.length}</small></button>`}).join("")}</div>`:"";
+ const q=nk(fl.q),list=all.filter(x=>(!q||nk(x.s.name).includes(q))&&(fl.st=="all"||(fl.st=="on")==on(x))&&(!fl.zone||(fl.zone=="-"?!ZONES.includes(x.s.zone):x.s.zone==fl.zone))&&(!fl.sex||x.s.sex==fl.sex))
+  .sort((p,q2)=>zi(p.s.zone)-zi(q2.s.zone)||xi(p.s.sex)-xi(q2.s.sex)||String(p.s.name).localeCompare(q2.s.name,"zh-Hant"));
+ const grp=new Map();list.forEach(x=>{const k=ZONES.includes(x.s.zone)?x.s.zone:"未填區別";if(!grp.has(k))grp.set(k,[]);grp.get(k).push(x)});
+ const row=x=>{const{s,r}=x,e=ciOf(s.id,d),meta=[zs(s.zone),s.sex,r.name!="班員"?r.name:""].filter(Boolean).join("・");
+  return `<div class="pr${e?" on":""}"><div class="pn"><b>${esc(s.name)}</b> <span class="mut">${esc(meta)}</span>${s.walkin?' <span class="tag wk">現場</span>':""}${e?`<div class="mut">${hm(e.t)} 報到${e.by?"・"+esc(e.by):""}</div>`:""}</div>
+  ${e?`<button class="cib on" data-a="unci" data-sid="${esc(s.id)}">✓ 已到</button>`:`<button class="cib" data-a="ci" data-sid="${esc(s.id)}">報到</button>`}</div>`};
+ const body=list.length?[...grp].map(([k,l])=>`<div class="zh"><b>${k}</b><span>已到 ${l.filter(on).length}／${l.length}</span></div>${l.map(row).join("")}`).join(""):`<p class="mut" style="text-align:center;padding:16px 0">${n?"沒有符合條件的人":"這一天沒有人報名"}</p>`;
+ return pick+days+`<div class="row" style="margin-top:8px"><div class="sp" style="min-width:110px"><label>職司</label><select id="f_role">${[["bz","班員"],["staff","工作人員"],["all","全部"]].map(([k,v])=>`<option value="${k}" ${rk==k?"selected":""}>${v}</option>`).join("")}</select></div>
+ <div class="sp" style="min-width:110px"><label>區別</label><select id="f_zone"><option value="">全部區別</option>${ZONES.map(z=>`<option ${fl.zone==z?"selected":""}>${z}</option>`).join("")}<option value="-" ${fl.zone=="-"?"selected":""}>未填</option></select></div>
+ <div class="sp" style="min-width:90px"><label>性別</label><select id="f_sex"><option value="">乾坤</option>${SEX.map(x=>`<option ${fl.sex==x?"selected":""}>${x}</option>`).join("")}</select></div></div></div>
+ ${d!=t?`<div class="banner">注意：目前是 <b>${md(d)}（${wd(d)}）</b>的報到，不是今天（${md(t)}）。</div>`:""}
+ <div class="card stk"><div class="tiles"><div class="tile"><b>${n}</b><span>應到</span></div><div class="tile ok"><b>${a}</b><span>已到</span></div><div class="tile bad"><b>${n-a}</b><span>未到</span></div><div class="tile wk"><b>${w}</b><span>現場補登</span></div></div>
+ <div class="bar"><i style="width:${pct(a,n)}%"></i></div>
+ <div class="row" style="flex-wrap:nowrap"><input id="q" placeholder="搜尋姓名" value="${esc(fl.q)}" autocomplete="off" style="flex:1;min-width:0"><div class="seg tabs" style="flex-wrap:nowrap">${[["all","全部"],["off","未到"],["on","已到"]].map(([k,v])=>`<button data-a="st" data-v="${k}" class="${fl.st==k?"on":""}">${v}</button>`).join("")}</div></div>
+ <div class="row" style="margin-top:6px"><span class="mut">${md(d)}（${wd(d)}）${esc(c.title)}・${c.start||""}${c.end?"–"+c.end:""}${c.location?"・"+esc(c.location):""}</span><span class="sp"></span><button class="p" data-a="wk">＋ 現場補登</button></div></div>
+ <div class="card">${body}</div>`}
+function modal(h){const m=document.createElement("div");m.className="mask";m.innerHTML=`<div class="modal">${h}</div>`;m.addEventListener("click",e=>{if(e.target==m)m.remove()});document.body.appendChild(m);return m}
+function knownPeople(){const m=new Map(),add=(n,z,x)=>{const k=nk(n),p=m.get(k)||{name:String(n).trim()};if(z)p.z=z;if(x)p.x=x;m.set(k,p)};
+ (stats||[]).forEach(s=>Object.values(s.days||{}).forEach(l=>l.forEach(e=>add(e.n,e.z,e.x))));(cur?cur.signups:[]).forEach(s=>add(s.name,s.zone,s.sex));return m}
+function walkUi(){const c=pickCourse();if(!c||!cur)return;const mem=(c.roles||[]).filter(r=>!isLead(r)).sort((a,b)=>(b.name=="班員")-(a.name=="班員"));if(!mem.length)return alert("此課程沒有組員／班員職司，無法現場補登");
+ modal(`<h2>現場補登</h2><div class="mut">${esc(c.title)}・${md(day)}（${wd(day)}）</div>
+ <label>姓名</label><input id="w_n" maxlength="20" list="w_names" autocomplete="off"><datalist id="w_names">${[...knownPeople().values()].map(p=>`<option value="${esc(p.name)}">`).join("")}</datalist>
+ <div class="row" style="flex-wrap:nowrap"><div class="sp"><label>區別</label><select id="w_z"><option value="">請選擇</option>${ZONES.map(z=>`<option>${z}</option>`).join("")}</select></div><div class="sp"><label>性別</label><select id="w_x"><option value="">請選擇</option>${SEX.map(x=>`<option>${x}</option>`).join("")}</select></div></div>
+ <label>職司</label><select id="w_r">${mem.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
+ <div id="w_h" class="mut" style="margin-top:6px"></div>
+ <p class="mut">會寫入行事曆系統的正式報名並同時報到（不受名額上限限制），統計時標示為「現場」。</p>
+ <div class="row"><span class="sp"></span><button data-a="close">取消</button><button class="p" data-a="walk">報名並報到</button></div>`);setTimeout(()=>$("#w_n")&&$("#w_n").focus(),50)}
+function walkHint(){const n=$("#w_n").value.trim(),c=pickCourse(),p=knownPeople().get(nk(n)),ex=cur&&cur.signups.find(x=>nk(x.name)==nk(n));
+ if(p){if(p.z&&!$("#w_z").value)$("#w_z").value=p.z;if(p.x&&!$("#w_x").value)$("#w_x").value=p.x}
+ $("#w_h").innerHTML=ex?(ciOf(ex.id,day)?'<span class="ok">此人這一天已經報到。</span>':`<span class="ok">此人已報名本課程${isMulti(c)&&!sdays(ex,c).includes(day)?"（未勾選這一天，會自動補上）":""}，按下後直接報到。</span>`):p?"已帶入此人先前的區別與性別。":""}
+
+// ----- 統計（只讀統計摘要 ciStats：一堂課 1 次讀取）-----
+async function loadStats(force){if(statsLoading||(!force&&stats&&statsY==year))return;statsLoading=true;refresh();
+ try{await flushStat();stats=await store.statsOfYear(year);statsY=year}catch(e){alert("讀取統計失敗："+(e.message||e))}statsLoading=false;refresh()}
+function slots(){const t=todayLocal(),out=[];(stats||[]).forEach(S0=>{if(!catOk(S0))return;Object.entries(S0.days||{}).forEach(([d,l])=>l.forEach(e=>{
+  if(who=="bz"?e.r!="班員":e.r=="講師")return;out.push({c:S0,d,e,past:d<t,now:d==t,on:!!e.t,wk:!!e.w})}))});return out}
+function courseDays(sl){const t=todayLocal(),G=new Map();(stats||[]).forEach(S0=>{if(!catOk(S0)||(who=="bz"&&!S0.hasBz))return;Object.keys(S0.days||{}).sort().forEach((d,i)=>G.set(S0.courseId+"|"+d,{c:S0,d,i,past:d<t,now:d==t,n:0,a:0,w:0}))});
+ sl.forEach(x=>{const g=G.get(x.c.courseId+"|"+x.d);if(!g)return;g.n++;if(x.on){g.a++;if(x.wk)g.w++}});
+ return[...G.values()].filter(g=>g.n||who=="bz").sort((p,q)=>p.d.localeCompare(q.d)||(p.c.start||"").localeCompare(q.c.start||""))}
+function matrix(sl){const R=[...ZONES,"未填"].map(z=>({z,v:{乾:[0,0],坤:[0,0],"?":[0,0]}}));
+ sl.forEach(x=>{const r=R[ZONES.includes(x.e.z)?ZONES.indexOf(x.e.z):6],k=SEX.includes(x.e.x)?x.e.x:"?";r.v[k][1]++;if(x.on)r.v[k][0]++});
+ return R.filter((r,i)=>i<6||r.v.乾[1]+r.v.坤[1]+r.v["?"][1])}
+function persons(sl){const P=new Map();sl.forEach(x=>{const k=nk(x.e.n);let p=P.get(k);if(!p)P.set(k,p={k,name:x.e.n,zone:"",sex:"",L:[]});if(x.e.z)p.zone=x.e.z;if(x.e.x)p.sex=x.e.x;p.L.push(x)});
+ return[...P.values()].map(p=>{const pa=p.L.filter(x=>x.past);return{...p,n:pa.length,a:pa.filter(x=>x.on).length,f:p.L.length-pa.length}})}
+const isMultiS=c=>Object.keys(c.days||{}).length>1;
+function statView(){if(!stats||statsY!=year){setTimeout(loadStats);return '<div class="card mut">讀取統計中…</div>'}
+ const sl=slots(),CD=courseDays(sl),past=CD.filter(g=>g.past),T=past.reduce((o,g)=>(o.n+=g.n,o.a+=g.a,o.w+=g.w,o),{n:0,a:0,w:0}),last=(stats||[]).map(s=>s.at||"").sort().pop();
+ const head=`<div class="card"><div class="row"><b>統計對象</b><div class="seg tabs">${[["bz","班員"],["all","全部人員（不含講師）"]].map(([k,v])=>`<button data-a="who" data-v="${k}" class="${who==k?"on":""}">${v}</button>`).join("")}</div><span class="sp"></span><button data-a="reload">重新整理</button>${lv>=1?'<button data-a="rebuild">全年重算</button>':""}</div>
+ <p class="mut" style="margin:8px 0 0">資料來自每堂課的統計摘要（${stats.length} 堂），${last?"最近更新 "+ftime(last)+"。":""}在報到頁點名後約 15 秒自動更新。只有在報到頁打開過的課程才會出現；若有缺漏或行事曆那邊改過報名，可按「全年重算」（會讀取全年報名資料，約等於打開一次行事曆）。<br>總計、區別整年度、個人出席率只算已舉行的日子；今天列為「進行中」，未來列為「未開始」。單位為人次。</p></div>`;
+ const t1=`<div class="card"><h2>班程出席率</h2><div class="scx"><table class="tb"><tr><th>日期</th><th>班程</th><th class="n">應到</th><th class="n">實到</th><th class="n">未到</th><th class="n">現場</th><th>出席率</th></tr>
+ ${CD.map(g=>`<tr class="ck" data-a="goci" data-id="${esc(g.c.courseId)}" data-d="${g.d}"><td style="white-space:nowrap">${md(g.d)}（${wd(g.d)}）</td><td class="t">${esc(g.c.title)}${isMultiS(g.c)?` <span class="mut">第${g.i+1}天</span>`:""}</td><td class="n">${g.n}</td>${g.past||g.now?`<td class="n ok">${g.a}</td><td class="n bad">${g.n-g.a}</td><td class="n">${g.w||""}</td><td style="white-space:nowrap">${g.now?'<span class="tag wk">進行中</span> ':""}${pbar(g.a,g.n)}</td>`:`<td colspan="4" class="mut">未開始</td>`}</tr>`).join("")||'<tr><td colspan="7" class="mut">沒有資料</td></tr>'}
+ ${past.length?`<tr class="tot"><td colspan="2">已舉行 ${past.length} 場合計</td><td class="n">${T.n}</td><td class="n">${T.a}</td><td class="n">${T.n-T.a}</td><td class="n">${T.w}</td><td style="white-space:nowrap">${pbar(T.a,T.n)}</td></tr>`:""}</table></div><p class="mut">點一列可跳到該場報到。</p></div>`;
+ if(scope!="year"&&!CD.some(g=>g.c.courseId+"|"+g.d==scope))scope="year";
+ const sg=CD.find(g=>g.c.courseId+"|"+g.d==scope),msl=scope=="year"?sl.filter(x=>x.past):sl.filter(x=>x.c.courseId+"|"+x.d==scope),M2=matrix(msl),fut=scope!="year"&&!(sg.past||sg.now);
+ const cell=v=>v[1]?`<span class="ok">${v[0]}</span> / ${v[1]}`:'<span class="mut">—</span>',sum=(r,i)=>r.v.乾[i]+r.v.坤[i]+r.v["?"][i];
+ const col=k=>[M2.reduce((s,r)=>s+r.v[k][0],0),M2.reduce((s,r)=>s+r.v[k][1],0)],tot=[M2.reduce((s,r)=>s+sum(r,0),0),M2.reduce((s,r)=>s+sum(r,1),0)],hasQ=M2.some(r=>r.v["?"][1]);
+ const t2=`<div class="card"><h2>區別 × 乾坤</h2><label style="margin-top:0">範圍</label><select id="scope"><option value="year">${year} 整年度（已舉行）</option>${CD.map(g=>`<option value="${esc(g.c.courseId)}|${g.d}" ${scope==g.c.courseId+"|"+g.d?"selected":""}>${md(g.d)} ${esc(g.c.title)}${isMultiS(g.c)?"（第"+(g.i+1)+"天）":""}${g.past?"":g.now?"・今天":"・未開始"}</option>`).join("")}</select>
+ <div class="scx" style="margin-top:8px"><table class="tb"><tr><th>區別</th><th class="n">乾 報到／應到</th><th class="n">坤 報到／應到</th>${hasQ?'<th class="n">未填性別</th>':""}<th class="n">合計</th><th>出席率</th></tr>
+ ${M2.map(r=>`<tr><td><b>${r.z}</b></td><td class="n">${cell(r.v.乾)}</td><td class="n">${cell(r.v.坤)}</td>${hasQ?`<td class="n">${cell(r.v["?"])}</td>`:""}<td class="n">${cell([sum(r,0),sum(r,1)])}</td><td style="white-space:nowrap">${fut?'<span class="mut">未開始</span>':pbar(sum(r,0),sum(r,1))}</td></tr>`).join("")}
+ <tr class="tot"><td>合計</td><td class="n">${cell(col("乾"))}</td><td class="n">${cell(col("坤"))}</td>${hasQ?`<td class="n">${cell(col("?"))}</td>`:""}<td class="n">${cell(tot)}</td><td style="white-space:nowrap">${fut?"":pbar(tot[0],tot[1])}</td></tr></table></div></div>`;
+ let P=persons(sl);const q=nk(pq);if(q)P=P.filter(p=>nk(p.name).includes(q));
+ P.sort({rate:(a,b)=>(a.n?a.a/a.n:2)-(b.n?b.a/b.n:2)||b.n-a.n,att:(a,b)=>b.a-a.a||a.name.localeCompare(b.name,"zh-Hant"),zone:(a,b)=>zi(a.zone)-zi(b.zone)||xi(a.sex)-xi(b.sex)||a.name.localeCompare(b.name,"zh-Hant"),name:(a,b)=>a.name.localeCompare(b.name,"zh-Hant")}[psort]);
+ const det=p=>p.L.slice().sort((a,b)=>a.d.localeCompare(b.d)).map(x=>`${x.on?'<span class="ok">✓</span>':x.past||x.now?'<span class="bad">✗</span>':'<span class="mut">○</span>'} ${md(x.d)} ${esc(x.c.title)}${x.e.r!="班員"?"（"+esc(x.e.r)+"）":""}${x.wk?' <span class="tag wk">現場</span>':""}${x.past?"":x.now?' <span class="mut">今天</span>':' <span class="mut">未開始</span>'}`).join("<br>");
+ const t3=`<div class="card"><h2>個人年度出席（${P.length} 人）</h2><div class="row" style="flex-wrap:nowrap"><input id="pq" placeholder="搜尋姓名" value="${esc(pq)}" autocomplete="off" style="flex:1;min-width:0"><select id="psort" style="width:auto">${[["rate","出席率低→高"],["att","出席次數多→少"],["zone","依區別"],["name","依姓名"]].map(([k,v])=>`<option value="${k}" ${psort==k?"selected":""}>${v}</option>`).join("")}</select></div>
+ <div class="scx" style="margin-top:6px"><table class="tb"><tr><th>姓名</th><th>區別</th><th class="n">應到</th><th class="n">出席</th><th class="n">缺席</th><th class="n hide-s">未開始／今天</th><th>出席率</th></tr>
+ ${P.map(p=>`<tr class="ck" data-a="pt" data-k="${esc(p.k)}"><td><b>${esc(p.name)}</b></td><td style="white-space:nowrap">${zs(p.zone)}${esc(p.sex)}</td><td class="n">${p.n}</td><td class="n ok">${p.a}</td><td class="n bad">${p.n-p.a||""}</td><td class="n hide-s mut">${p.f||""}</td><td style="white-space:nowrap">${pbar(p.a,p.n)}</td></tr>${openP.has(p.k)?`<tr class="det"><td colspan="7">${det(p)}</td></tr>`:""}`).join("")||'<tr><td colspan="7" class="mut">沒有資料</td></tr>'}
+ </table></div><p class="mut">點姓名可展開每一場的出缺席。</p></div>`;
+ return head+t1+t2+t3}
+
+// ----- 匯出 Excel（用已載入的統計摘要，不另外讀資料庫）-----
+const loadXlsx=()=>new Promise((res,rej)=>{if(window.XLSX)return res();const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";sc.onload=res;sc.onerror=()=>rej(new Error("Excel 元件載入失敗，請檢查網路"));document.head.appendChild(sc)});
+async function exportX(){if(!stats||statsY!=year)await loadStats(true);await loadXlsx();const X=window.XLSX,t=todayLocal(),wb=X.utils.book_new();
+ const add=(rows,name,w)=>{const s=X.utils.aoa_to_sheet(rows),pc=rows[0].indexOf("出席率");if(pc>=0)for(let i=1;i<rows.length;i++){const c=s[X.utils.encode_cell({r:i,c:pc})];if(c&&c.t=="n")c.z="0%"}s["!cols"]=w.map(n=>({wch:n}));X.utils.book_append_sheet(wb,s,name)};
+ const a=[];(stats||[]).filter(catOk).forEach(S0=>Object.entries(S0.days||{}).forEach(([d,l])=>l.forEach(e=>a.push([d,wd(d),S0.title,S0.category||"",e.r,e.n,e.z,e.x,e.t?"已到":d<t?"未到":d==t?"未到（進行中）":"未開始",e.t,e.w?"是":""]))));
+ a.sort((p,q)=>p[0].localeCompare(q[0])||p[2].localeCompare(q[2])||zi(p[6])-zi(q[6])||xi(p[7])-xi(q[7]));
+ add([["日期","星期","班程","分類","職司","姓名","區別","性別","狀態","報到時間","現場補登"],...a],"報到名單",[12,6,26,8,12,12,8,6,14,9,8]);
+ const sl=slots(),CD=courseDays(sl),wl=who=="bz"?"班員":"全部人員";
+ add([["日期","星期","班程","第幾天","應到","實到","未到","現場補登","出席率"],...CD.map(g=>[g.d,wd(g.d),g.c.title,isMultiS(g.c)?g.i+1:"",g.n,g.past||g.now?g.a:"",g.past||g.now?g.n-g.a:"",g.past||g.now?g.w:"",g.past||g.now?(g.n?pct(g.a,g.n)/100:""):"未開始"])],"班程出席率",[12,6,26,7,7,7,7,9,9]);
+ const M2=matrix(sl.filter(x=>x.past));add([["區別","乾 應到","乾 報到","坤 應到","坤 報到","未填性別 應到","未填性別 報到","合計 應到","合計 報到","出席率"],...M2.map(r=>{const n=r.v.乾[1]+r.v.坤[1]+r.v["?"][1],k=r.v.乾[0]+r.v.坤[0]+r.v["?"][0];return[r.z,r.v.乾[1],r.v.乾[0],r.v.坤[1],r.v.坤[0],r.v["?"][1],r.v["?"][0],n,k,n?pct(k,n)/100:""]})],"區別乾坤",[10,8,8,8,8,12,12,10,10,8]);
+ add([["姓名","區別","性別","應到","出席","缺席","未開始","出席率","缺席場次"],...persons(sl).sort((p,q)=>zi(p.zone)-zi(q.zone)||xi(p.sex)-xi(q.sex)||p.name.localeCompare(q.name,"zh-Hant")).map(p=>[p.name,p.zone,p.sex,p.n,p.a,p.n-p.a,p.f,p.n?pct(p.a,p.n)/100:"",p.L.filter(x=>x.past&&!x.on).map(x=>md(x.d)+" "+x.c.title).join("、")])],"個人出席",[12,8,6,6,6,6,7,8,60]);
+ X.writeFile(wb,`報到統計-${year}${cat?"-"+cat:""}-${wl}.xlsx`)}
+
+// ===== 事件 =====
+const run=async(f,btn)=>{try{await f()}catch(e){const m=e.message||e.code||String(e);alert(/quota|resource-exhausted/i.test(m)?"今日資料庫用量已達免費上限，暫時無法寫入。請稍後再試（額度每天重置）。":/permission/i.test(m)?"權限不足：可能是管理密碼已變更（請登出後重新輸入），或 Firestore 規則尚未開放 checkins／ciStats。":m)}if(btn)btn.disabled=false;refresh()};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
+ if(a=="login"){const n=$("#g_nm").value.trim(),pw=$("#g_pw").value;if(!n)return alert("請輸入姓名");if(!pw&&lv<1)return alert("請輸入管理密碼");b.disabled=true;
+  (async()=>{let nl=lv;if(pw){nl=await store.claim(pw);if(!nl){b.disabled=false;return alert("密碼錯誤")}}lv=nl;me={name:n};lsSet("name",n);subCourses();render()})()}
+ else if(a=="logout"){if(!confirm("登出後，這台裝置需要重新輸入管理密碼。確定？"))return;(async()=>{await flushStat();await store.unclaim();lv=0;render()})()}
+ else if(a=="tab"){tab=b.dataset.v;if(tab=="stat")stats=null;render();scrollTo(0,0)}
+ else if(a=="cmode"){cmode=cmode=="near"?"year":"near";subCourses()}
+ else if(a=="dy"){day=b.dataset.d;render()}
+ else if(a=="st"){fl.st=b.dataset.v;render()}
+ else if(a=="who"){who=b.dataset.v;render()}
+ else if(a=="ci"||a=="unci"){const c=pickCourse(),s=cur&&cur.signups.find(x=>x.id==b.dataset.sid);if(!c||!s)return;if(a=="unci"&&!confirm(`取消 ${s.name} 在 ${md(day)} 的報到？`))return;b.disabled=true;run(async()=>{await store.setCi(c,day,s.id,a=="ci");markDirty()})}
+ else if(a=="wk")walkUi()
+ else if(a=="close")b.closest(".mask").remove()
+ else if(a=="walk"){const c=pickCourse(),n=$("#w_n").value.trim(),z=$("#w_z").value,x=$("#w_x").value,r=c&&(c.roles||[]).find(y=>y.id==$("#w_r").value);if(!n)return alert("請輸入姓名");if(!r||!cur)return;
+  const ex=cur.signups.find(y=>nk(y.name)==nk(n));if(ex&&ciOf(ex.id,day))return alert("此人這一天已經報到");if(!ex&&r.name=="班員"&&(!z||!x))return alert("請選擇區別與性別");
+  b.disabled=true;run(async()=>{await store.walkin(c,r,n,z,x,day,ex);markDirty();document.querySelectorAll(".mask").forEach(m=>m.remove());fl.q="";fl.st="all"},b)}
+ else if(a=="goci"){const id=b.dataset.id,d=b.dataset.d;tab="ci";fl.q="";fl.st="all";fl.role="";
+  const go=()=>{if(!courses.some(c=>c.id==id)){if(cmode=="near"){cmode="year";subCourses()}}showAll=true;if(cid!=id){cid=id;subCourse()}day=d;render();scrollTo(0,0)};go()}
+ else if(a=="pt"){const k=b.dataset.k;openP.has(k)?openP.delete(k):openP.add(k);render()}
+ else if(a=="reload")loadStats(true)
+ else if(a=="rebuild"){if(!confirm(`重新計算 ${year} 年度所有課程的統計？\n會讀取全年的課程、報名與報到資料（約等於打開一次行事曆的用量），建議只在統計有缺漏時使用。`))return;b.disabled=true;run(async()=>{await flushStat();stats=await store.rebuild(year);statsY=year;alert(`已重新計算 ${stats.length} 堂課程`)},b)}
+ else if(a=="xlsx")exportX().catch(x=>alert(x.message||x))});
+document.addEventListener("change",e=>{const id=e.target.id;
+ if(id=="yr"){year=+e.target.value;stats=null;scope="year";openP.clear();if(cmode=="year")subCourses();render()}
+ else if(id=="cs"){flushStat();cid=e.target.value;day=null;fl.q="";fl.role="";subCourse();render()}
+ else if(id=="sa"){showAll=e.target.checked;render()}
+ else if(id=="cat"){cat=e.target.value;scope="year";render()}
+ else if(id=="f_role"){fl.role=e.target.value;render()}
+ else if(id=="f_zone"){fl.zone=e.target.value;render()}
+ else if(id=="f_sex"){fl.sex=e.target.value;render()}
+ else if(id=="scope"){scope=e.target.value;render()}
+ else if(id=="psort"){psort=e.target.value;render()}});
+const onType=e=>{const id=e.target.id;if(id=="q"){fl.q=e.target.value;render()}else if(id=="pq"){pq=e.target.value;render()}else if(id=="w_n")walkHint()};
+document.addEventListener("compositionstart",()=>{composing=true});
+document.addEventListener("compositionend",e=>{composing=false;onType(e)});
+document.addEventListener("input",e=>{if(e.isComposing||composing)return;onType(e)});
+document.addEventListener("keydown",e=>{if(e.key=="Enter"&&(e.target.id=="g_nm"||e.target.id=="g_pw")){const l=document.querySelector("[data-a=login]");if(l)l.click()}});
+
+async function init(){$("#app").innerHTML='<div class="card mut" style="margin:20vh auto;max-width:300px;text-align:center">載入中…</div>';
+ if(DEMO)demoLoad();else{try{await startFirebase()}catch(e){$("#app").innerHTML=`<div class="card">Firebase 連線失敗：${esc(e.message)}</div>`;return}}
+ const nm=lsGet("name");if(nm)me={name:nm};ready=true;if(me&&lv>=1)subCourses();render()}
+init();
+</script></body></html>
