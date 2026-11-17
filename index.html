@@ -6,9 +6,9 @@
 <meta name="apple-mobile-web-app-title" content="報到系統">
 <title>報到暨班員統計</title>
 <style>
-:root{--bg:#f5f6f8;--card:#fff;--tx:#1d2330;--mut:#6b7385;--pri:#2f5fd0;--on:#fff;--bd:#dde1e8;--ok:#1f8a4c;--okbg:#e3f4ea;--bad:#c23b3b;--warn:#fff4d6;--warnt:#7a5a00;--wk:#b9650b;
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1d2330;--mut:#6b7385;--pri:#2f5fd0;--on:#fff;--bd:#dde1e8;--ok:#1f8a4c;--okbg:#e3f4ea;--bad:#c23b3b;--warn:#fff4d6;--warnt:#7a5a00;--wk:#b9650b;--hp:#fde0ef;--sat:#e1f3e1;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--tx:#e8ebf1;--mut:#9aa3b5;--pri:#6f93f0;--on:#10141c;--bd:#2f3644;--ok:#4cc380;--okbg:#17321f;--bad:#ef7676;--warn:#3a2f10;--warnt:#f0cf7a;--wk:#f0a35e}}
+@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--tx:#e8ebf1;--mut:#9aa3b5;--pri:#6f93f0;--on:#10141c;--bd:#2f3644;--ok:#4cc380;--okbg:#17321f;--bad:#ef7676;--warn:#3a2f10;--warnt:#f0cf7a;--wk:#f0a35e;--hp:#4d2a3d;--sat:#1f3826}}
 *{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,"Noto Sans TC","PingFang TC",sans-serif}
 .wrap{max-width:980px;margin:0 auto;padding:12px}
 .banner{background:var(--warn);color:var(--warnt);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px}
@@ -37,7 +37,7 @@ label{display:block;font-size:13px;color:var(--mut);margin:8px 0 2px}
 .pr{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--bd)}.pr:last-child{border-bottom:0}
 .pr.on{background:var(--okbg)}.pr .pn{flex:1;min-width:0}.pr .pn b{font-size:17px}
 .cib{min-width:96px;padding:10px 12px;font-size:16px;font-weight:600;border:2px solid var(--pri);color:var(--pri)}.cib.on{background:var(--ok);border-color:var(--ok);color:#fff}
-.dsel button{padding:6px 10px;font-size:14px}.dsel button small{display:block;font-size:11px;opacity:.8}
+.dsel button{padding:6px 10px;font-size:14px}.dsel button.hp:not(.on){background:var(--hp)}.dsel button.sa:not(.on){background:var(--sat)}.lg{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;border:1px solid var(--bd);margin-right:3px}.lg.hp{background:var(--hp)}.lg.sa{background:var(--sat)}.dsel button small{display:block;font-size:11px;opacity:.8}
 .tb{width:100%;border-collapse:collapse;font-size:14px}.tb td,.tb th{border-bottom:1px solid var(--bd);padding:6px 5px;text-align:left;vertical-align:middle}.tb th{color:var(--mut);font-weight:500;font-size:12px;white-space:nowrap}
 .tb td:first-child{white-space:nowrap}.tb .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.tb tr.tot td{font-weight:700;background:var(--bg)}.tb tr.ck{cursor:pointer}.tb tr.ck:hover td{background:var(--bg)}
 .tb tr.det td{background:var(--bg);font-size:13px;line-height:1.7}
@@ -119,6 +119,9 @@ const store={
   await S.runTransaction(fs,async t=>{const cs=await t.get(cr),ss=await t.get(sr);
    if(!cs.exists()||cs.data().status!="active")throw Error("課程已取消或不存在");if(ss.exists())throw Error("此人已報名這堂課，請在名單中直接報到");
    const n=(cs.data().counts||{})[r.id]||0;t.set(sr,sd);t.update(cr,{["counts."+r.id]:n+1});t.set(kr,{courseId:c.id,year:c.year,d:{[d]:{[sid]:v}}},{merge:true})})},
+ // 假日標示：與行事曆相同，讀 years 集合的 marks（"p"＝例假日／國定假日），只有幾份文件
+ listenMarks(cb){if(!F)return dsub(()=>{let a={};try{a=JSON.parse(localStorage.getItem("acms_v1"))||{}}catch(e){}cb(a.marks||{})});
+  const{fs,S}=F;return S.onSnapshot(S.collection(fs,"years"),q=>{const m={};q.docs.forEach(d=>Object.assign(m,d.data().marks||{}));cb(m)},()=>{})},
  async getStat(cid){if(!F)return M.stats[cid]||null;const s=await F.S.getDoc(F.S.doc(F.fs,"ciStats",cid));return s.exists()?s.data():null},
  async putStat(o){if(!F){M.stats[o.courseId]=o;return demoSave()}await F.S.setDoc(F.S.doc(F.fs,"ciStats",o.courseId),o)},
  async statsOfYear(y){if(!F)return Object.values(M.stats).filter(s=>s.year==y);const{fs,S}=F;return docs(await S.getDocs(S.query(S.collection(fs,"ciStats"),S.where("year","==",y))))},
@@ -147,6 +150,8 @@ const sameStat=(a,b)=>!!a&&!!b&&canon({...a,at:0,by:0})==canon({...b,at:0,by:0})
 
 // ===== 狀態 =====
 let year=new Date().getFullYear(),tab="ci",cmode="near",courses=[],cid=null,day=null,cur=null,cat="",showAll=false,ready=false,composing=false;
+let marks={},unM=null;const dayCls=d=>marks[d]=="p"||new Date(d+"T00:00:00").getDay()==0?"hp":new Date(d+"T00:00:00").getDay()==6?"sa":"";
+function subMarks(){if(!unM)unM=store.listenMarks(m=>{marks=m;refresh()})}
 let unC=null,unK=null,loadingCourse=false,dirty=false,stTimer=null;
 const fl={q:"",st:"all",zone:"",sex:"",role:""};
 let stats=null,statsY=null,statsLoading=false,who="bz",scope="year",pq="",psort="rate",openP=new Set();
@@ -192,11 +197,11 @@ function roster(c,d,rk){if(!cur||cur.cid!=c.id)return[];const rs=c.roles||[];ret
 function ciView(){const c=pickCourse(),L=ciCourses();
  const pick=`<div class="card"><label style="margin-top:0">班程</label><select id="cs">${L.map(x=>`<option value="${x.id}" ${x.id==cid?"selected":""}>${md(x.date)}${isMulti(x)?"～"+md(x.endDate):""}　${esc(x.title)}${x.category?"（"+x.category+"）":""}</option>`).join("")}</select>
  <div class="row" style="margin-top:6px"><label style="display:flex;gap:6px;align-items:center;color:var(--tx);margin:0"><input type="checkbox" id="sa" style="width:auto" ${showAll?"checked":""}> 含沒有「班員」職司的課程</label><span class="sp"></span>
- <button class="seg" data-a="cmode" style="font-size:13px">${cmode=="near"?`顯示 ${year} 全年課程`:"只顯示近期課程"}</button></div>`;
+ ${lv>=2?`<button class="seg" data-a="cmode" style="font-size:13px">${cmode=="near"?`顯示 ${year} 全年課程`:"只顯示近期課程"}</button>`:`<span class="mut">顯示近期課程（${md(addDays(todayLocal(),-NEAR_BEFORE))}～${md(addDays(todayLocal(),NEAR_AFTER))} 開始）</span>`}</div>`;
  if(!c)return pick+`<p class="mut">${cmode=="near"?"近期":year+" 年度"}沒有可報到的班程${cat?"（"+cat+"）":""}。</p></div>`;
  if(!cur||cur.cid!=c.id)return pick+'<p class="mut">載入名單中…</p></div>';
  const rk=roleKey(c),d=day,all=roster(c,d,rk),on=x=>!!ciOf(x.s.id,d),n=all.length,a=all.filter(on).length,w=all.filter(x=>on(x)&&x.s.walkin).length,dl=dayList(c),t=todayLocal();
- const days=isMulti(c)?`<label>日期</label><div class="seg tabs dsel">${dl.map(x=>{const R=roster(c,x,rk);return `<button data-a="dy" data-d="${x}" class="${x==d?"on":""}">${md(x)}（${wd(x)}）<small>${R.filter(y=>ciOf(y.s.id,x)).length}/${R.length}</small></button>`}).join("")}</div>`:"";
+ const days=isMulti(c)?`<label>日期</label><div class="seg tabs dsel">${dl.map(x=>{const R=roster(c,x,rk);return `<button data-a="dy" data-d="${x}" class="${x==d?"on":""} ${dayCls(x)}">${md(x)}（${wd(x)}）<small>${R.filter(y=>ciOf(y.s.id,x)).length}/${R.length}</small></button>`}).join("")}</div><div class="mut" style="margin-top:4px"><span class="lg hp"></span>例假日／國定假日　<span class="lg sa"></span>星期六</div>`:"";
  const q=nk(fl.q),list=all.filter(x=>(!q||nk(x.s.name).includes(q))&&(fl.st=="all"||(fl.st=="on")==on(x))&&(!fl.zone||(fl.zone=="-"?!ZONES.includes(x.s.zone):x.s.zone==fl.zone))&&(!fl.sex||x.s.sex==fl.sex))
   .sort((p,q2)=>zi(p.s.zone)-zi(q2.s.zone)||xi(p.s.sex)-xi(q2.s.sex)||String(p.s.name).localeCompare(q2.s.name,"zh-Hant"));
  const grp=new Map();list.forEach(x=>{const k=ZONES.includes(x.s.zone)?x.s.zone:"未填區別";if(!grp.has(k))grp.set(k,[]);grp.get(k).push(x)});
@@ -283,10 +288,10 @@ async function exportX(){if(!stats||statsY!=year)await loadStats(true);await loa
 const run=async(f,btn)=>{try{await f()}catch(e){const m=e.message||e.code||String(e);alert(/quota|resource-exhausted/i.test(m)?"今日資料庫用量已達免費上限，暫時無法寫入。請稍後再試（額度每天重置）。":/permission/i.test(m)?"權限不足：可能是管理密碼已變更（請登出後重新輸入），或 Firestore 規則尚未開放 checkins／ciStats。":m)}if(btn)btn.disabled=false;refresh()};
 document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
  if(a=="login"){const n=$("#g_nm").value.trim(),pw=$("#g_pw").value;if(!n)return alert("請輸入姓名");if(!pw&&lv<1)return alert("請輸入管理密碼");b.disabled=true;
-  (async()=>{let nl=lv;if(pw){nl=await store.claim(pw);if(!nl){b.disabled=false;return alert("密碼錯誤")}}lv=nl;me={name:n};lsSet("name",n);subCourses();render()})()}
+  (async()=>{let nl=lv;if(pw){nl=await store.claim(pw);if(!nl){b.disabled=false;return alert("密碼錯誤")}}lv=nl;me={name:n};lsSet("name",n);if(lv<2)cmode="near";subCourses();subMarks();render()})()}
  else if(a=="logout"){if(!confirm("登出後，這台裝置需要重新輸入管理密碼。確定？"))return;(async()=>{await flushStat();await store.unclaim();lv=0;render()})()}
  else if(a=="tab"){tab=b.dataset.v;if(tab=="stat")stats=null;render();scrollTo(0,0)}
- else if(a=="cmode"){cmode=cmode=="near"?"year":"near";subCourses()}
+ else if(a=="cmode"){if(lv<2)return;cmode=cmode=="near"?"year":"near";subCourses()}
  else if(a=="dy"){day=b.dataset.d;render()}
  else if(a=="st"){fl.st=b.dataset.v;render()}
  else if(a=="who"){who=b.dataset.v;render()}
@@ -297,7 +302,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b
   const ex=cur.signups.find(y=>nk(y.name)==nk(n));if(ex&&ciOf(ex.id,day))return alert("此人這一天已經報到");if(!ex&&r.name=="班員"&&(!z||!x))return alert("請選擇區別與性別");
   b.disabled=true;run(async()=>{await store.walkin(c,r,n,z,x,day,ex);markDirty();document.querySelectorAll(".mask").forEach(m=>m.remove());fl.q="";fl.st="all"},b)}
  else if(a=="goci"){const id=b.dataset.id,d=b.dataset.d;tab="ci";fl.q="";fl.st="all";fl.role="";
-  const go=()=>{if(!courses.some(c=>c.id==id)){if(cmode=="near"){cmode="year";subCourses()}}showAll=true;if(cid!=id){cid=id;subCourse()}day=d;render();scrollTo(0,0)};go()}
+  const go=()=>{if(!courses.some(c=>c.id==id)){if(lv<2){tab="stat";return alert("這堂課不在近期範圍內，只有後台管理者可以開啟全年課程的報到。")}if(cmode=="near"){cmode="year";subCourses()}}showAll=true;if(cid!=id){cid=id;subCourse()}day=d;render();scrollTo(0,0)};go()}
  else if(a=="pt"){const k=b.dataset.k;openP.has(k)?openP.delete(k):openP.add(k);render()}
  else if(a=="reload")loadStats(true)
  else if(a=="rebuild"){if(!confirm(`重新計算 ${year} 年度所有課程的統計？\n會讀取全年的課程、報名與報到資料（約等於打開一次行事曆的用量），建議只在統計有缺漏時使用。`))return;b.disabled=true;run(async()=>{await flushStat();stats=await store.rebuild(year);statsY=year;alert(`已重新計算 ${stats.length} 堂課程`)},b)}
@@ -320,6 +325,6 @@ document.addEventListener("keydown",e=>{if(e.key=="Enter"&&(e.target.id=="g_nm"|
 
 async function init(){$("#app").innerHTML='<div class="card mut" style="margin:20vh auto;max-width:300px;text-align:center">載入中…</div>';
  if(DEMO)demoLoad();else{try{await startFirebase()}catch(e){$("#app").innerHTML=`<div class="card">Firebase 連線失敗：${esc(e.message)}</div>`;return}}
- const nm=lsGet("name");if(nm)me={name:nm};ready=true;if(me&&lv>=1)subCourses();render()}
+ const nm=lsGet("name");if(nm)me={name:nm};ready=true;if(me&&lv>=1){subCourses();subMarks()}render()}
 init();
 </script></body></html>
