@@ -102,8 +102,8 @@ const store={
  // 選定的一場：該課程的報名＋報到文件（1 份）
  listenCourse(cid,cb){const st={signups:null,ck:null},emit=()=>{if(st.signups&&st.ck)cb(st)};
   if(!F)return dsub(()=>{st.signups=M.signups.filter(s=>s.courseId==cid);st.ck=M.checkins[cid]||{};emit()});
-  const{fs,S}=F,u1=S.onSnapshot(S.query(S.collection(fs,"signups"),S.where("courseId","==",cid)),s=>{st.signups=docs(s);emit()},e=>alert("讀取報名失敗："+e.message)),
-  u2=S.onSnapshot(S.doc(fs,"checkins",cid),s=>{st.ck=s.exists()?s.data():{};emit()},e=>alert("讀取報到紀錄失敗："+e.message));
+  const{fs,S}=F,u1=S.onSnapshot(S.query(S.collection(fs,"signups"),S.where("courseId","==",cid)),s=>{st.signups=docs(s);emit()},e=>onErr("讀取報名",e)),
+  u2=S.onSnapshot(S.doc(fs,"checkins",cid),s=>{st.ck=s.exists()?s.data():{};emit()},e=>onErr("讀取報到紀錄",e));
   return()=>{u1();u2()}},
  async setCi(c,d,sid,on){const v=on?{t:new Date().toISOString(),by:me.name}:null;
   if(!F){const k=M.checkins[c.id]=M.checkins[c.id]||{courseId:c.id,year:c.year,d:{}};k.d[d]=k.d[d]||{};if(v)k.d[d][sid]=v;else delete k.d[d][sid];return demoSave()}
@@ -151,6 +151,10 @@ const sameStat=(a,b)=>!!a&&!!b&&canon({...a,at:0,by:0})==canon({...b,at:0,by:0})
 // ===== 狀態 =====
 let year=new Date().getFullYear(),tab="ci",cmode="near",courses=[],cid=null,day=null,cur=null,cat="",showAll=false,ready=false,composing=false;
 let marks={},unM=null;const dayCls=d=>marks[d]=="p"||new Date(d+"T00:00:00").getDay()==0?"hp":new Date(d+"T00:00:00").getDay()==6?"sa":"";
+// 讀取錯誤：權限不足代表管理者身分已失效（登出或密碼被變更），停止監聽並回到登入畫面，不跳錯誤視窗
+function stopCourse(){if(unK){unK();unK=null}cur=null;cid=null;stats=null}
+let gateMsg="";
+function onErr(what,e){if(/permission/i.test(e.code||e.message||"")){if(lv>=1){stopCourse();lv=0;gateMsg="管理者身分已失效（可能是管理密碼已變更），請重新輸入密碼。";render()}return}alert(what+"失敗："+e.message)}
 function subMarks(){if(!unM)unM=store.listenMarks(m=>{marks=m;refresh()})}
 let unC=null,unK=null,loadingCourse=false,dirty=false,stTimer=null;
 const fl={q:"",st:"all",zone:"",sex:"",role:""};
@@ -179,7 +183,7 @@ function view(){if(!me||lv<1)return gate();
  <div class="tabs vt" style="margin-top:8px">${[["ci","報到"],["stat","統計彙整"]].map(([k,t])=>`<button data-a="tab" data-v="${k}" class="${tab==k?"on":""}">${t}</button>`).join("")}</div></div>
  ${tab=="ci"?ciView():statView()}`}
 function gate(){return `<div class="card" style="max-width:380px;margin:12vh auto"><h1>報到暨班員統計</h1>
- <p class="mut">此系統限管理者使用。請輸入姓名與管理密碼（與行事曆系統相同，一般管理者即可）。第一次在這台裝置使用時需要輸入，之後會記住。</p>
+ ${gateMsg?`<div class="banner">${esc(gateMsg)}</div>`:""}<p class="mut">此系統限管理者使用。請輸入姓名與管理密碼（與行事曆系統相同，一般管理者即可）。第一次在這台裝置使用時需要輸入，之後會記住。</p>
  <label>姓名（會記錄為報到人員）</label><input id="g_nm" maxlength="20" value="${esc(me?me.name:lsGet("name")||"")}"><label>管理密碼</label><input id="g_pw" type="password" autocomplete="current-password">
  ${DEMO?'<p class="mut">示範密碼：一般管理者 manager、後台管理者 admin</p>':""}
  <p><button class="p" data-a="login" style="width:100%">進入</button></p></div>`}
@@ -236,39 +240,61 @@ function walkHint(){const n=$("#w_n").value.trim(),c=pickCourse(),p=knownPeople(
 // ----- 統計（只讀統計摘要 ciStats：一堂課 1 次讀取）-----
 async function loadStats(force){if(statsLoading||(!force&&stats&&statsY==year))return;statsLoading=true;refresh();
  try{await flushStat();stats=await store.statsOfYear(year);statsY=year}catch(e){alert("讀取統計失敗："+(e.message||e))}statsLoading=false;refresh()}
-function slots(){const t=todayLocal(),out=[];(stats||[]).forEach(S0=>{if(!catOk(S0))return;Object.entries(S0.days||{}).forEach(([d,l])=>l.forEach(e=>{
-  if(who=="bz"?e.r!="班員":e.r=="講師")return;out.push({c:S0,d,e,past:d<t,now:d==t,on:!!e.t,wk:!!e.w})}))});return out}
-function courseDays(sl){const t=todayLocal(),G=new Map();(stats||[]).forEach(S0=>{if(!catOk(S0)||(who=="bz"&&!S0.hasBz))return;Object.keys(S0.days||{}).sort().forEach((d,i)=>G.set(S0.courseId+"|"+d,{c:S0,d,i,past:d<t,now:d==t,n:0,a:0,w:0}))});
- sl.forEach(x=>{const g=G.get(x.c.courseId+"|"+x.d);if(!g)return;g.n++;if(x.on){g.a++;if(x.wk)g.w++}});
+/* 統計單位：
+   - 單日課程：每人每場 1 筆。
+   - 多日課程「結束後」：每人 1 筆，出席天數超過本人報名天數的一半才算出席。
+   - 多日課程「進行中」：逐日顯示，標為進行中，不計入總計與個人出席率。 */
+const okRole=e=>who=="bz"?e.r=="班員":e.r!="講師";
+const sDays=S0=>Object.keys(S0.days||{}).sort();
+const ended=S0=>{const ds=sDays(S0);return ds.length>1&&ds[ds.length-1]<todayLocal()};
+function items(){const t=todayLocal(),out=[];(stats||[]).forEach(S0=>{if(!catOk(S0))return;const ds=sDays(S0),multi=ds.length>1;
+ if(multi&&ended(S0)){const P=new Map();ds.forEach(d=>S0.days[d].forEach(e=>{if(!okRole(e))return;const k=nk(e.n);let p=P.get(k);if(!p)P.set(k,p={e,marks:{},wk:0});p.e={...p.e,...(e.z?{z:e.z}:{}),...(e.x?{x:e.x}:{})};p.marks[d]=!!e.t;if(e.w)p.wk=1}));
+  P.forEach(p=>{const n=Object.keys(p.marks).length,a=Object.values(p.marks).filter(Boolean).length;out.push({c:S0,k:S0.courseId,d:ds[0],d2:ds[ds.length-1],multi:true,nd:ds.length,e:p.e,n,a,on:a*2>n,wk:!!p.wk,past:true,now:false,marks:p.marks})})}
+ else ds.forEach((d,i)=>S0.days[d].forEach(e=>{if(!okRole(e))return;out.push({c:S0,k:S0.courseId+"|"+d,d,d2:d,multi:false,di:multi?i+1:0,e,n:1,a:e.t?1:0,on:!!e.t,wk:!!e.w,past:!multi&&d<t,now:d==t||(multi&&d<t)})}))});return out}
+function units(it){const t=todayLocal(),G=new Map();
+ (stats||[]).forEach(S0=>{if(!catOk(S0)||(who=="bz"&&!S0.hasBz))return;const ds=sDays(S0),multi=ds.length>1;
+  if(multi&&ended(S0))G.set(S0.courseId,{c:S0,k:S0.courseId,d:ds[0],d2:ds[ds.length-1],multi:true,nd:ds.length,past:true,now:false,n:0,a:0,w:0,full:0});
+  else ds.forEach((d,i)=>G.set(S0.courseId+"|"+d,{c:S0,k:S0.courseId+"|"+d,d,d2:d,multi:false,di:multi?i+1:0,past:!multi&&d<t,now:d==t||(multi&&d<t),n:0,a:0,w:0,full:0}))});
+ it.forEach(x=>{const g=G.get(x.k);if(!g)return;g.n++;if(x.on){g.a++;if(x.wk)g.w++}if(x.multi&&x.a==x.n)g.full++});
  return[...G.values()].filter(g=>g.n||who=="bz").sort((p,q)=>p.d.localeCompare(q.d)||(p.c.start||"").localeCompare(q.c.start||""))}
-function matrix(sl){const R=[...ZONES,"未填"].map(z=>({z,v:{乾:[0,0],坤:[0,0],"?":[0,0]}}));
- sl.forEach(x=>{const r=R[ZONES.includes(x.e.z)?ZONES.indexOf(x.e.z):6],k=SEX.includes(x.e.x)?x.e.x:"?";r.v[k][1]++;if(x.on)r.v[k][0]++});
+function matrix(it){const R=[...ZONES,"未填"].map(z=>({z,v:{乾:[0,0],坤:[0,0],"?":[0,0]}}));
+ it.forEach(x=>{const r=R[ZONES.includes(x.e.z)?ZONES.indexOf(x.e.z):6],k=SEX.includes(x.e.x)?x.e.x:"?";r.v[k][1]++;if(x.on)r.v[k][0]++});
  return R.filter((r,i)=>i<6||r.v.乾[1]+r.v.坤[1]+r.v["?"][1])}
-function persons(sl){const P=new Map();sl.forEach(x=>{const k=nk(x.e.n);let p=P.get(k);if(!p)P.set(k,p={k,name:x.e.n,zone:"",sex:"",L:[]});if(x.e.z)p.zone=x.e.z;if(x.e.x)p.sex=x.e.x;p.L.push(x)});
+function persons(it){const P=new Map();it.forEach(x=>{const k=nk(x.e.n);let p=P.get(k);if(!p)P.set(k,p={k,name:x.e.n,zone:"",sex:"",L:[]});if(x.e.z)p.zone=x.e.z;if(x.e.x)p.sex=x.e.x;p.L.push(x)});
  return[...P.values()].map(p=>{const pa=p.L.filter(x=>x.past);return{...p,n:pa.length,a:pa.filter(x=>x.on).length,f:p.L.length-pa.length}})}
-const isMultiS=c=>Object.keys(c.days||{}).length>1;
+const uDate=g=>g.multi?`${md(g.d)}～${md(g.d2)}`:`${md(g.d)}（${wd(g.d)}）`;
+const uTitle=g=>esc(g.c.title)+(g.multi?` <span class="mut">${g.nd} 天</span>`:g.di?` <span class="mut">第${g.di}天</span>`:"");
+const uLabel=g=>(g.multi?`${md(g.d)}～${md(g.d2)} ${g.c.title}（${g.nd}天）`:`${md(g.d)} ${g.c.title}${g.di?"（第"+g.di+"天）":""}`);
+function multiDetail(g,it){const ds=sDays(g.c),L=it.filter(x=>x.k==g.k).sort((a,b)=>zi(a.e.z)-zi(b.e.z)||xi(a.e.x)-xi(b.e.x)||a.e.n.localeCompare(b.e.n,"zh-Hant"));
+ const mk=(x,d)=>d in x.marks?(x.marks[d]?'<span class="ok">✓</span>':'<span class="bad">✗</span>'):'<span class="mut">－</span>';
+ return `<tr class="det"><td colspan="7"><div class="scx"><table class="tb" style="background:var(--card)"><tr><th>姓名</th><th>區別</th>${ds.map(d=>`<th class="n">${md(d)}<br>${wd(d)}</th>`).join("")}<th class="n">出席天數</th><th>判定</th></tr>
+ ${L.map(x=>`<tr><td><b>${esc(x.e.n)}</b>${x.wk?' <span class="tag wk">現場</span>':""}</td><td>${zs(x.e.z)}${esc(x.e.x)}</td>${ds.map(d=>`<td class="n">${mk(x,d)}</td>`).join("")}<td class="n">${x.a}/${x.n}${x.a==x.n?' <span class="tag">全勤</span>':""}</td><td>${x.on?'<span class="ok">出席</span>':'<span class="bad">未達</span>'}</td></tr>`).join("")}
+ <tr class="tot"><td colspan="2">每日出席</td>${ds.map(d=>`<td class="n">${L.filter(x=>x.marks[d]).length}</td>`).join("")}<td colspan="2"></td></tr></table></div>
+ <div class="mut">✓ 出席　✗ 缺席　－ 未報名該日。出席天數超過本人報名天數的一半，判定為「出席」。</div></td></tr>`}
+let openU=new Set();
 function statView(){if(!stats||statsY!=year){setTimeout(loadStats);return '<div class="card mut">讀取統計中…</div>'}
- const sl=slots(),CD=courseDays(sl),past=CD.filter(g=>g.past),T=past.reduce((o,g)=>(o.n+=g.n,o.a+=g.a,o.w+=g.w,o),{n:0,a:0,w:0}),last=(stats||[]).map(s=>s.at||"").sort().pop();
+ const it=items(),U=units(it),past=U.filter(g=>g.past),T=past.reduce((o,g)=>(o.n+=g.n,o.a+=g.a,o.w+=g.w,o),{n:0,a:0,w:0}),last=(stats||[]).map(s=>s.at||"").sort().pop();
  const head=`<div class="card"><div class="row"><b>統計對象</b><div class="seg tabs">${[["bz","班員"],["all","全部人員（不含講師）"]].map(([k,v])=>`<button data-a="who" data-v="${k}" class="${who==k?"on":""}">${v}</button>`).join("")}</div><span class="sp"></span><button data-a="reload">重新整理</button>${lv>=1?'<button data-a="rebuild">全年重算</button>':""}</div>
- <p class="mut" style="margin:8px 0 0">資料來自每堂課的統計摘要（${stats.length} 堂），${last?"最近更新 "+ftime(last)+"。":""}在報到頁點名後約 15 秒自動更新。只有在報到頁打開過的課程才會出現；若有缺漏或行事曆那邊改過報名，可按「全年重算」（會讀取全年報名資料，約等於打開一次行事曆）。<br>總計、區別整年度、個人出席率只算已舉行的日子；今天列為「進行中」，未來列為「未開始」。單位為人次。</p></div>`;
+ <p class="mut" style="margin:8px 0 0">資料來自每堂課的統計摘要（${stats.length} 堂），${last?"最近更新 "+ftime(last)+"。":""}在報到頁點名後約 15 秒自動更新；若有缺漏或行事曆那邊改過報名，可按「全年重算」（約等於打開一次行事曆的用量）。<br>
+ 單日課程每人每場算 1 次。多日課程結束後合併為一列、每人算 1 次：出席天數超過本人報名天數的一半才算出席；進行中的多日課程逐日顯示，不計入總計。</p></div>`;
  const t1=`<div class="card"><h2>班程出席率</h2><div class="scx"><table class="tb"><tr><th>日期</th><th>班程</th><th class="n">應到</th><th class="n">實到</th><th class="n">未到</th><th class="n">現場</th><th>出席率</th></tr>
- ${CD.map(g=>`<tr class="ck" data-a="goci" data-id="${esc(g.c.courseId)}" data-d="${g.d}"><td style="white-space:nowrap">${md(g.d)}（${wd(g.d)}）</td><td class="t">${esc(g.c.title)}${isMultiS(g.c)?` <span class="mut">第${g.i+1}天</span>`:""}</td><td class="n">${g.n}</td>${g.past||g.now?`<td class="n ok">${g.a}</td><td class="n bad">${g.n-g.a}</td><td class="n">${g.w||""}</td><td style="white-space:nowrap">${g.now?'<span class="tag wk">進行中</span> ':""}${pbar(g.a,g.n)}</td>`:`<td colspan="4" class="mut">未開始</td>`}</tr>`).join("")||'<tr><td colspan="7" class="mut">沒有資料</td></tr>'}
- ${past.length?`<tr class="tot"><td colspan="2">已舉行 ${past.length} 場合計</td><td class="n">${T.n}</td><td class="n">${T.a}</td><td class="n">${T.n-T.a}</td><td class="n">${T.w}</td><td style="white-space:nowrap">${pbar(T.a,T.n)}</td></tr>`:""}</table></div><p class="mut">點一列可跳到該場報到。</p></div>`;
- if(scope!="year"&&!CD.some(g=>g.c.courseId+"|"+g.d==scope))scope="year";
- const sg=CD.find(g=>g.c.courseId+"|"+g.d==scope),msl=scope=="year"?sl.filter(x=>x.past):sl.filter(x=>x.c.courseId+"|"+x.d==scope),M2=matrix(msl),fut=scope!="year"&&!(sg.past||sg.now);
+ ${U.map(g=>`<tr class="ck" ${g.multi?`data-a="ux" data-k="${esc(g.k)}"`:`data-a="goci" data-id="${esc(g.c.courseId)}" data-d="${g.d}"`}><td style="white-space:nowrap">${g.multi?(openU.has(g.k)?"▾ ":"▸ "):""}${uDate(g)}</td><td class="t">${uTitle(g)}${g.multi&&g.full?` <span class="tag">全勤 ${g.full} 人</span>`:""}</td><td class="n">${g.n}</td>${g.past||g.now?`<td class="n ok">${g.a}</td><td class="n bad">${g.n-g.a}</td><td class="n">${g.w||""}</td><td style="white-space:nowrap">${g.now?'<span class="tag wk">進行中</span> ':""}${pbar(g.a,g.n)}</td>`:`<td colspan="4" class="mut">未開始</td>`}</tr>${g.multi&&openU.has(g.k)?multiDetail(g,it):""}`).join("")||'<tr><td colspan="7" class="mut">沒有資料</td></tr>'}
+ ${past.length?`<tr class="tot"><td colspan="2">已結束 ${past.length} 場合計</td><td class="n">${T.n}</td><td class="n">${T.a}</td><td class="n">${T.n-T.a}</td><td class="n">${T.w}</td><td style="white-space:nowrap">${pbar(T.a,T.n)}</td></tr>`:""}</table></div><p class="mut">點單日課程可跳到該場報到；點多日課程（▸）可展開每人每天的出缺席。</p></div>`;
+ if(scope!="year"&&!U.some(g=>g.k==scope))scope="year";
+ const sg=U.find(g=>g.k==scope),msl=scope=="year"?it.filter(x=>x.past):it.filter(x=>x.k==scope),M2=matrix(msl),fut=scope!="year"&&!(sg.past||sg.now);
  const cell=v=>v[1]?`<span class="ok">${v[0]}</span> / ${v[1]}`:'<span class="mut">—</span>',sum=(r,i)=>r.v.乾[i]+r.v.坤[i]+r.v["?"][i];
  const col=k=>[M2.reduce((s,r)=>s+r.v[k][0],0),M2.reduce((s,r)=>s+r.v[k][1],0)],tot=[M2.reduce((s,r)=>s+sum(r,0),0),M2.reduce((s,r)=>s+sum(r,1),0)],hasQ=M2.some(r=>r.v["?"][1]);
- const t2=`<div class="card"><h2>區別 × 乾坤</h2><label style="margin-top:0">範圍</label><select id="scope"><option value="year">${year} 整年度（已舉行）</option>${CD.map(g=>`<option value="${esc(g.c.courseId)}|${g.d}" ${scope==g.c.courseId+"|"+g.d?"selected":""}>${md(g.d)} ${esc(g.c.title)}${isMultiS(g.c)?"（第"+(g.i+1)+"天）":""}${g.past?"":g.now?"・今天":"・未開始"}</option>`).join("")}</select>
- <div class="scx" style="margin-top:8px"><table class="tb"><tr><th>區別</th><th class="n">乾 報到／應到</th><th class="n">坤 報到／應到</th>${hasQ?'<th class="n">未填性別</th>':""}<th class="n">合計</th><th>出席率</th></tr>
+ const t2=`<div class="card"><h2>區別 × 乾坤</h2><label style="margin-top:0">範圍</label><select id="scope"><option value="year">${year} 整年度（已結束）</option>${U.map(g=>`<option value="${esc(g.k)}" ${scope==g.k?"selected":""}>${esc(uLabel(g))}${g.past?"":g.now?"・進行中":"・未開始"}</option>`).join("")}</select>
+ <div class="scx" style="margin-top:8px"><table class="tb"><tr><th>區別</th><th class="n">乾 出席／應到</th><th class="n">坤 出席／應到</th>${hasQ?'<th class="n">未填性別</th>':""}<th class="n">合計</th><th>出席率</th></tr>
  ${M2.map(r=>`<tr><td><b>${r.z}</b></td><td class="n">${cell(r.v.乾)}</td><td class="n">${cell(r.v.坤)}</td>${hasQ?`<td class="n">${cell(r.v["?"])}</td>`:""}<td class="n">${cell([sum(r,0),sum(r,1)])}</td><td style="white-space:nowrap">${fut?'<span class="mut">未開始</span>':pbar(sum(r,0),sum(r,1))}</td></tr>`).join("")}
  <tr class="tot"><td>合計</td><td class="n">${cell(col("乾"))}</td><td class="n">${cell(col("坤"))}</td>${hasQ?`<td class="n">${cell(col("?"))}</td>`:""}<td class="n">${cell(tot)}</td><td style="white-space:nowrap">${fut?"":pbar(tot[0],tot[1])}</td></tr></table></div></div>`;
- let P=persons(sl);const q=nk(pq);if(q)P=P.filter(p=>nk(p.name).includes(q));
+ let P=persons(it);const q=nk(pq);if(q)P=P.filter(p=>nk(p.name).includes(q));
  P.sort({rate:(a,b)=>(a.n?a.a/a.n:2)-(b.n?b.a/b.n:2)||b.n-a.n,att:(a,b)=>b.a-a.a||a.name.localeCompare(b.name,"zh-Hant"),zone:(a,b)=>zi(a.zone)-zi(b.zone)||xi(a.sex)-xi(b.sex)||a.name.localeCompare(b.name,"zh-Hant"),name:(a,b)=>a.name.localeCompare(b.name,"zh-Hant")}[psort]);
- const det=p=>p.L.slice().sort((a,b)=>a.d.localeCompare(b.d)).map(x=>`${x.on?'<span class="ok">✓</span>':x.past||x.now?'<span class="bad">✗</span>':'<span class="mut">○</span>'} ${md(x.d)} ${esc(x.c.title)}${x.e.r!="班員"?"（"+esc(x.e.r)+"）":""}${x.wk?' <span class="tag wk">現場</span>':""}${x.past?"":x.now?' <span class="mut">今天</span>':' <span class="mut">未開始</span>'}`).join("<br>");
+ const det=p=>p.L.slice().sort((a,b)=>a.d.localeCompare(b.d)).map(x=>`${x.past||x.now?(x.on?'<span class="ok">✓</span>':'<span class="bad">✗</span>'):'<span class="mut">○</span>'} ${x.multi?md(x.d)+"～"+md(x.d2):md(x.d)} ${esc(x.c.title)}${x.multi?`（${x.a}/${x.n} 天）`:x.di?`（第${x.di}天）`:""}${x.e.r!="班員"?"（"+esc(x.e.r)+"）":""}${x.wk?' <span class="tag wk">現場</span>':""}${x.past?"":x.now?' <span class="mut">進行中</span>':' <span class="mut">未開始</span>'}`).join("<br>");
  const t3=`<div class="card"><h2>個人年度出席（${P.length} 人）</h2><div class="row" style="flex-wrap:nowrap"><input id="pq" placeholder="搜尋姓名" value="${esc(pq)}" autocomplete="off" style="flex:1;min-width:0"><select id="psort" style="width:auto">${[["rate","出席率低→高"],["att","出席次數多→少"],["zone","依區別"],["name","依姓名"]].map(([k,v])=>`<option value="${k}" ${psort==k?"selected":""}>${v}</option>`).join("")}</select></div>
- <div class="scx" style="margin-top:6px"><table class="tb"><tr><th>姓名</th><th>區別</th><th class="n">應到</th><th class="n">出席</th><th class="n">缺席</th><th class="n hide-s">未開始／今天</th><th>出席率</th></tr>
+ <div class="scx" style="margin-top:6px"><table class="tb"><tr><th>姓名</th><th>區別</th><th class="n">應到</th><th class="n">出席</th><th class="n">缺席</th><th class="n hide-s">未結束</th><th>出席率</th></tr>
  ${P.map(p=>`<tr class="ck" data-a="pt" data-k="${esc(p.k)}"><td><b>${esc(p.name)}</b></td><td style="white-space:nowrap">${zs(p.zone)}${esc(p.sex)}</td><td class="n">${p.n}</td><td class="n ok">${p.a}</td><td class="n bad">${p.n-p.a||""}</td><td class="n hide-s mut">${p.f||""}</td><td style="white-space:nowrap">${pbar(p.a,p.n)}</td></tr>${openP.has(p.k)?`<tr class="det"><td colspan="7">${det(p)}</td></tr>`:""}`).join("")||'<tr><td colspan="7" class="mut">沒有資料</td></tr>'}
- </table></div><p class="mut">點姓名可展開每一場的出缺席。</p></div>`;
+ </table></div><p class="mut">單位為「場」：多日課程算 1 場。點姓名可展開每一場的出缺席。</p></div>`;
  return head+t1+t2+t3}
 
 // ----- 匯出 Excel（用已載入的統計摘要，不另外讀資料庫）-----
@@ -277,19 +303,21 @@ async function exportX(){if(!stats||statsY!=year)await loadStats(true);await loa
  const add=(rows,name,w)=>{const s=X.utils.aoa_to_sheet(rows),pc=rows[0].indexOf("出席率");if(pc>=0)for(let i=1;i<rows.length;i++){const c=s[X.utils.encode_cell({r:i,c:pc})];if(c&&c.t=="n")c.z="0%"}s["!cols"]=w.map(n=>({wch:n}));X.utils.book_append_sheet(wb,s,name)};
  const a=[];(stats||[]).filter(catOk).forEach(S0=>Object.entries(S0.days||{}).forEach(([d,l])=>l.forEach(e=>a.push([d,wd(d),S0.title,S0.category||"",e.r,e.n,e.z,e.x,e.t?"已到":d<t?"未到":d==t?"未到（進行中）":"未開始",e.t,e.w?"是":""]))));
  a.sort((p,q)=>p[0].localeCompare(q[0])||p[2].localeCompare(q[2])||zi(p[6])-zi(q[6])||xi(p[7])-xi(q[7]));
- add([["日期","星期","班程","分類","職司","姓名","區別","性別","狀態","報到時間","現場補登"],...a],"報到名單",[12,6,26,8,12,12,8,6,14,9,8]);
- const sl=slots(),CD=courseDays(sl),wl=who=="bz"?"班員":"全部人員";
- add([["日期","星期","班程","第幾天","應到","實到","未到","現場補登","出席率"],...CD.map(g=>[g.d,wd(g.d),g.c.title,isMultiS(g.c)?g.i+1:"",g.n,g.past||g.now?g.a:"",g.past||g.now?g.n-g.a:"",g.past||g.now?g.w:"",g.past||g.now?(g.n?pct(g.a,g.n)/100:""):"未開始"])],"班程出席率",[12,6,26,7,7,7,7,9,9]);
- const M2=matrix(sl.filter(x=>x.past));add([["區別","乾 應到","乾 報到","坤 應到","坤 報到","未填性別 應到","未填性別 報到","合計 應到","合計 報到","出席率"],...M2.map(r=>{const n=r.v.乾[1]+r.v.坤[1]+r.v["?"][1],k=r.v.乾[0]+r.v.坤[0]+r.v["?"][0];return[r.z,r.v.乾[1],r.v.乾[0],r.v.坤[1],r.v.坤[0],r.v["?"][1],r.v["?"][0],n,k,n?pct(k,n)/100:""]})],"區別乾坤",[10,8,8,8,8,12,12,10,10,8]);
- add([["姓名","區別","性別","應到","出席","缺席","未開始","出席率","缺席場次"],...persons(sl).sort((p,q)=>zi(p.zone)-zi(q.zone)||xi(p.sex)-xi(q.sex)||p.name.localeCompare(q.name,"zh-Hant")).map(p=>[p.name,p.zone,p.sex,p.n,p.a,p.n-p.a,p.f,p.n?pct(p.a,p.n)/100:"",p.L.filter(x=>x.past&&!x.on).map(x=>md(x.d)+" "+x.c.title).join("、")])],"個人出席",[12,8,6,6,6,6,7,8,60]);
+ add([["日期","星期","班程","分類","職司","姓名","區別","性別","狀態","報到時間","現場補登"],...a],"每日報到名單",[12,6,26,8,12,12,8,6,14,9,8]);
+ const it=items(),U=units(it),wl=who=="bz"?"班員":"全部人員";
+ add([["開始日期","結束日期","班程","天數／第幾天","應到","出席","未到","現場補登","全勤人數","出席率"],...U.map(g=>[g.d,g.d2,g.c.title,g.multi?g.nd+"天":g.di?"第"+g.di+"天":"",g.n,g.past||g.now?g.a:"",g.past||g.now?g.n-g.a:"",g.past||g.now?g.w:"",g.multi?g.full:"",g.past||g.now?(g.n?pct(g.a,g.n)/100:""):"未開始"])],"班程出席率",[12,12,26,12,7,7,7,9,9,9]);
+ const mr=[];U.filter(g=>g.multi).forEach(g=>{const ds=sDays(g.c);it.filter(x=>x.k==g.k).sort((p,q)=>zi(p.e.z)-zi(q.e.z)||xi(p.e.x)-xi(q.e.x)||p.e.n.localeCompare(q.e.n,"zh-Hant")).forEach(x=>mr.push([`${g.d}～${g.d2}`,g.c.title,x.e.n,x.e.z,x.e.x,x.n,x.a,x.a==x.n?"是":"",x.on?"出席":"未達",ds.map(d=>md(d)+(d in x.marks?(x.marks[d]?"✓":"✗"):"－")).join(" ")]))});
+ if(mr.length)add([["期間","班程","姓名","區別","性別","報名天數","出席天數","全勤","判定（過半）","每日"],...mr],"多日班總表",[24,22,12,8,6,9,9,6,12,60]);
+ const M2=matrix(it.filter(x=>x.past));add([["區別","乾 應到","乾 出席","坤 應到","坤 出席","未填性別 應到","未填性別 出席","合計 應到","合計 出席","出席率"],...M2.map(r=>{const n=r.v.乾[1]+r.v.坤[1]+r.v["?"][1],k=r.v.乾[0]+r.v.坤[0]+r.v["?"][0];return[r.z,r.v.乾[1],r.v.乾[0],r.v.坤[1],r.v.坤[0],r.v["?"][1],r.v["?"][0],n,k,n?pct(k,n)/100:""]})],"區別乾坤",[10,8,8,8,8,12,12,10,10,8]);
+ add([["姓名","區別","性別","應到（場）","出席","缺席","未結束","出席率","缺席場次"],...persons(it).sort((p,q)=>zi(p.zone)-zi(q.zone)||xi(p.sex)-xi(q.sex)||p.name.localeCompare(q.name,"zh-Hant")).map(p=>[p.name,p.zone,p.sex,p.n,p.a,p.n-p.a,p.f,p.n?pct(p.a,p.n)/100:"",p.L.filter(x=>x.past&&!x.on).map(x=>(x.multi?md(x.d)+"～"+md(x.d2):md(x.d))+" "+x.c.title+(x.multi?`（${x.a}/${x.n}天）`:"")).join("、")])],"個人出席",[12,8,6,9,6,6,7,8,60]);
  X.writeFile(wb,`報到統計-${year}${cat?"-"+cat:""}-${wl}.xlsx`)}
 
 // ===== 事件 =====
 const run=async(f,btn)=>{try{await f()}catch(e){const m=e.message||e.code||String(e);alert(/quota|resource-exhausted/i.test(m)?"今日資料庫用量已達免費上限，暫時無法寫入。請稍後再試（額度每天重置）。":/permission/i.test(m)?"權限不足：可能是管理密碼已變更（請登出後重新輸入），或 Firestore 規則尚未開放 checkins／ciStats。":m)}if(btn)btn.disabled=false;refresh()};
 document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
  if(a=="login"){const n=$("#g_nm").value.trim(),pw=$("#g_pw").value;if(!n)return alert("請輸入姓名");if(!pw&&lv<1)return alert("請輸入管理密碼");b.disabled=true;
-  (async()=>{let nl=lv;if(pw){nl=await store.claim(pw);if(!nl){b.disabled=false;return alert("密碼錯誤")}}lv=nl;me={name:n};lsSet("name",n);if(lv<2)cmode="near";subCourses();subMarks();render()})()}
- else if(a=="logout"){if(!confirm("登出後，這台裝置需要重新輸入管理密碼。確定？"))return;(async()=>{await flushStat();await store.unclaim();lv=0;render()})()}
+  (async()=>{let nl=lv;if(pw){nl=await store.claim(pw);if(!nl){b.disabled=false;return alert("密碼錯誤")}}lv=nl;gateMsg="";me={name:n};lsSet("name",n);if(lv<2)cmode="near";subCourses();subMarks();render()})()}
+ else if(a=="logout"){if(!confirm("登出後，這台裝置需要重新輸入管理密碼。確定？"))return;(async()=>{await flushStat();stopCourse();lv=0;gateMsg="";render();await store.unclaim()})()}
  else if(a=="tab"){tab=b.dataset.v;if(tab=="stat")stats=null;render();scrollTo(0,0)}
  else if(a=="cmode"){if(lv<2)return;cmode=cmode=="near"?"year":"near";subCourses()}
  else if(a=="dy"){day=b.dataset.d;render()}
@@ -303,6 +331,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b
   b.disabled=true;run(async()=>{await store.walkin(c,r,n,z,x,day,ex);markDirty();document.querySelectorAll(".mask").forEach(m=>m.remove());fl.q="";fl.st="all"},b)}
  else if(a=="goci"){const id=b.dataset.id,d=b.dataset.d;tab="ci";fl.q="";fl.st="all";fl.role="";
   const go=()=>{if(!courses.some(c=>c.id==id)){if(lv<2){tab="stat";return alert("這堂課不在近期範圍內，只有後台管理者可以開啟全年課程的報到。")}if(cmode=="near"){cmode="year";subCourses()}}showAll=true;if(cid!=id){cid=id;subCourse()}day=d;render();scrollTo(0,0)};go()}
+ else if(a=="ux"){const k=b.dataset.k;openU.has(k)?openU.delete(k):openU.add(k);render()}
  else if(a=="pt"){const k=b.dataset.k;openP.has(k)?openP.delete(k):openP.add(k);render()}
  else if(a=="reload")loadStats(true)
  else if(a=="rebuild"){if(!confirm(`重新計算 ${year} 年度所有課程的統計？\n會讀取全年的課程、報名與報到資料（約等於打開一次行事曆的用量），建議只在統計有缺漏時使用。`))return;b.disabled=true;run(async()=>{await flushStat();stats=await store.rebuild(year);statsY=year;alert(`已重新計算 ${stats.length} 堂課程`)},b)}
